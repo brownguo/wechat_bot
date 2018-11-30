@@ -27,7 +27,7 @@ class requests
 
             curl_setopt(self::$ch, CURLOPT_RETURNTRANSFER,true);
             curl_setopt(self::$ch, CURLOPT_HEADER, false);
-            curl_setopt(self::$ch, CURLOPT_USERAGENT, "PWS/".self::VERSION);
+            curl_setopt(self::$ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36");
             curl_setopt(self::$ch, CURLOPT_TIMEOUT, self::$timeout);
             curl_setopt(self::$ch, CURLOPT_NOSIGNAL,true);
         }
@@ -50,7 +50,7 @@ class requests
             curl_setopt(self::$ch, CURLOPT_POSTFIELDS,http_build_query($args));
         }
 
-        if(strpos($url, 'https'))
+        if(strpos($url, 'https') !== false)
         {
             curl_setopt(self::$ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt(self::$ch, CURLOPT_SSL_VERIFYHOST, false);

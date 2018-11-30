@@ -12,7 +12,7 @@ class configs
     {
         return array(
 
-            'appid' =>      'wxeb7ec651dd0aefa9',
+            'appid' =>      'wx782c26e4c19acffb',
             'lang'  =>      'zh_CN',
         );
     }

@@ -14,6 +14,9 @@ class wechat_bot
     protected static $args;
     protected static $request_url;
 
+    //uuid
+    protected static $uuid;
+
     public static function _init()
     {
         self::$args = configs::args();
@@ -33,6 +36,15 @@ class wechat_bot
             '_'     =>date::getTime(),
         );
 
+        $res = requests::post($url,$args);
+
+        preg_match('/window.QRLogin.code = (.*?); window.QRLogin.uuid = "(.*?)";/si',$res,$uuid_arr);
+
+        if($uuid_arr[1] == 200)
+        {
+            logger::info('get uuid success');
+            self::$uuid = $uuid_arr[2];
+        }
     }
 }
 
