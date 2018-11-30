@@ -128,10 +128,12 @@ class wechat_bot
             self::$wxsid = $vals[4]['value'];
             self::$skey  = $vals[3]['value'];
             logger::info(print_r($vals,true));
+            logger::notice('登录成功');
+
         }
         else
         {
-            logger::notice('登录失败~');
+            logger::notice('登录失败');
         }
     }
 }
