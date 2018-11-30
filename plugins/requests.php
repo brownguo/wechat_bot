@@ -77,7 +77,7 @@ class requests
         curl_close(self::$ch);
     }
 
-    public static function get($url,$args)
+    public static function get($url,$args=null)
     {
         self::_init();
         self::request($url,'get',$args);
@@ -94,5 +94,27 @@ class requests
     public static function get_http_info()
     {
         return self::$http_info;
+    }
+
+    public static function curl_download($url,$dir)
+    {
+        $ch = curl_init($url);
+
+        $fp = fopen($dir, "wb");
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_exec($ch);
+        $curl_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if($curl_code == 200)
+        {
+            curl_close($ch);
+            fclose($fp);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 }

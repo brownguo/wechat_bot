@@ -20,7 +20,9 @@ class configs
     public static function request_url()
     {
          return array(
-             'get_uuid_url'  =>  'https://login.weixin.qq.com/jslogin',
+             'get_uuid_url'     =>  'https://login.weixin.qq.com/jslogin',
+             'get_qrcode_url'   =>  'https://login.weixin.qq.com/qrcode/%s?t=webwx',
+             'wait_scan_url'    =>  'https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login?uuid=%s&tip=1&_=%s'
          );
     }
 }

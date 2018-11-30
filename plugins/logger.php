@@ -74,7 +74,7 @@ class logger
         );
     }
 
-    public static function notice($string,$type = 'null',$background_color=null)
+    public static function notice($string,$type = 'info',$background_color=null)
     {
 
         self::_initBackgroundColors();
