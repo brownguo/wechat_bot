@@ -45,6 +45,7 @@ class wechat_bot
         self::_wechat_init();
         self::_wechat_notify();
         self::_wechat_get_contact();
+        self::_get_group_list();
     }
 
     public static function _get_uuid()
@@ -246,6 +247,46 @@ class wechat_bot
             logger::notice(sprintf('共%s个好友,公众号:%s,群组:%s',self::$MemberCount,count(self::$PublicUsersList),
                 count(self::$GroupList)));
         }
+    }
+
+    public static function _get_group_list()
+    {
+
+        $url = sprintf(self::$request_url['get_group_url'],date::getTime(),self::$pass_ticket);
+
+        foreach (self::$GroupList as $k=>$v)
+        {
+            $_build_g_list[] = array(
+                'UserName'=>$v['UserName'],
+                'EncryChatRoomId'=>'',
+            );
+        }
+
+        $args = array(
+            'BaseRequest'=>array(
+                'Uin'     =>self::$wxuin,
+                'Sid'     =>self::$wxsid,
+                'Skey'    =>self::$skey,
+                'DeviceID'=>self::$DeviceID
+            ),
+            'Count'       =>count(self::$GroupList),
+            'List'        =>json_encode($_build_g_list,JSON_UNESCAPED_UNICODE),
+        );
+
+        logger::info('开始记录List');
+
+        logger::info(print_r($args,true));
+
+        $args = json_encode($args,JSON_UNESCAPED_UNICODE);
+
+
+
+        $res = requests::post($url,$args);
+
+        $res = json_decode($res,true);
+
+        logger::info('开始记录postres');
+        logger::info(print_r($res,true));
     }
 }
 
