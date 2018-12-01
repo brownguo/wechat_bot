@@ -22,7 +22,10 @@ class configs
          return array(
              'get_uuid_url'     =>  'https://login.weixin.qq.com/jslogin',
              'get_qrcode_url'   =>  'https://login.weixin.qq.com/qrcode/%s?t=webwx',
-             'wait_scan_url'    =>  'https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login?uuid=%s&tip=1&_=%s'
+             'wait_scan_url'    =>  'https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login?uuid=%s&tip=1&_=%s',
+             'wechat_init_url'  =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxinit?pass_ticket=%s&skey=%s&r=%s',
+             'notify_url'       =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxstatusnotify?pass_ticket=%s',
+             'get_contact_url'  =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetcontact?pass_ticket=%s&skey=%s&r=%s',
          );
     }
 }

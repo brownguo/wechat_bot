@@ -46,8 +46,17 @@ class requests
 
         if($method == 'POST')
         {
+            if(is_array($args))
+            {
+                $args = http_build_query($args);
+            }
+
+            curl_setopt(self::$ch, CURLOPT_HTTPHEADER, array(
+                "ContentType: application/json; charset=UTF-8"
+            ));
+
             curl_setopt(self::$ch, CURLOPT_POST, true);
-            curl_setopt(self::$ch, CURLOPT_POSTFIELDS,http_build_query($args));
+            curl_setopt(self::$ch, CURLOPT_POSTFIELDS,$args);
         }
 
         if(strpos($url, 'https') !== false)

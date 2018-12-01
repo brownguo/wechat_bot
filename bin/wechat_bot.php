@@ -23,6 +23,16 @@ class wechat_bot
     protected static $pass_ticket;
     protected static $skey;
 
+    protected static $BaseRequest = array();
+    protected static $DeviceID;
+    protected static $FromUserName;
+
+    protected static $MemberCount;
+    protected static $ContactList = array();//联系人列表
+    protected static $GroupList = array();        //群组列表
+    protected static $PublicUsersList = array(); //公众号
+    protected static $SpecialUsersList = array();
+
     public static function _init()
     {
         self::$args = configs::args();
@@ -32,6 +42,9 @@ class wechat_bot
         self::_showQRCode();
         self::_waitForLogin();
         self::_do_login();
+        self::_wechat_init();
+        self::_wechat_notify();
+        self::_wechat_get_contact();
     }
 
     public static function _get_uuid()
@@ -123,17 +136,115 @@ class wechat_bot
 
         if($vals[1]['value'] == 0)
         {
+            self::$DeviceID = 'e'.time();
+
             self::$pass_ticket = $vals[6]['value'];
             self::$wxuin = $vals[5]['value'];
             self::$wxsid = $vals[4]['value'];
             self::$skey  = $vals[3]['value'];
+
+
+            self::$BaseRequest = array(
+                'BaseRequest'=>array(
+                    'Uin'       => self::$wxuin,
+                    'Sid'       => self::$wxsid,
+                    'Skey'      => self::$skey,
+                    'DeviceID'  => self::$DeviceID,
+                )
+            );
+
             logger::info(print_r($vals,true));
             logger::notice('登录成功');
-
         }
         else
         {
             logger::notice('登录失败');
+        }
+    }
+
+    public static function _wechat_init()
+    {
+        $url = sprintf(self::$request_url['wechat_init_url'],self::$pass_ticket,self::$skey,time());
+
+        $args = self::$BaseRequest;
+
+        $res = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE));
+
+        $res = json_decode($res,true);
+
+        if($res['BaseResponse']['Ret'] == 0)
+        {
+
+            self::$FromUserName = $res['User']['UserName'];
+
+            logger::notice('微信初始化成功');
+            logger::info(print_R($res,true));
+        }
+    }
+
+    public static function _wechat_notify()
+    {
+        $url  = sprintf(self::$request_url['notify_url'],self::$pass_ticket);
+
+        $args = array(
+            'BaseRequest'=>array(
+                'Uin'       => self::$wxuin,
+                'Sid'       => self::$wxsid,
+                'Skey'      => self::$skey,
+                'DeviceID'  => self::$DeviceID,
+            ),
+            'ClientMsgId'   =>date::getTime(),
+            'Code'          =>'3',
+            'FromUserName'  =>self::$FromUserName,
+            'ToUserName'    =>self::$FromUserName,
+        );
+        $args = json_encode($args,JSON_UNESCAPED_UNICODE);
+
+        $res = requests::post($url,$args);
+
+        $res = json_decode($res,true);
+
+        if($res['BaseResponse']['Ret'] == 0)
+        {
+            logger::notice('开启微信状态通知成功');
+            logger::info(print_r($res,true));
+        }
+    }
+
+    public static function _wechat_get_contact()
+    {
+        self::$DeviceID = 'e'.time();
+
+        $url  = sprintf(self::$request_url['get_contact_url'],self::$pass_ticket,self::$skey,time());
+
+        $args = self::$BaseRequest;
+
+        $args['DeviceID'] = self::$DeviceID;
+
+        $res  = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE));
+
+        $res  = json_decode($res,true);
+
+        logger::info(print_r($res,true));
+
+        if($res['BaseResponse']['Ret'] == 0)
+        {
+            self::$MemberCount = $res['MemberCount'];
+            self::$ContactList = $res['MemberList'];
+
+            foreach (self::$ContactList as $key=>$val)
+            {
+                if($val['VerifyFlag'] % 8 == 0 && $val['VerifyFlag'] !=0)
+                {
+                    array_push(self::$PublicUsersList,$val);
+                }
+                if(strpos($val['UserName'],'@@') !== false)
+                {
+                    array_push(self::$GroupList,$val);
+                }
+            }
+            logger::notice(sprintf('共%s个好友,公众号:%s,群组:%s',self::$MemberCount,count(self::$PublicUsersList),
+                count(self::$GroupList)));
         }
     }
 }
