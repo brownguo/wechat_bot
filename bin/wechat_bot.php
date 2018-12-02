@@ -18,6 +18,8 @@ class wechat_bot
     protected static $uuid;
     protected static $redirect_uri;
 
+    protected static $sync_url;
+
     protected static $wxuin;
     protected static $wxsid;
     protected static $pass_ticket;
@@ -33,11 +35,13 @@ class wechat_bot
     protected static $PublicUsersList = array(); //公众号
     protected static $SpecialUsersList = array();
     protected static $Synckey = array();
+    protected static $syncHost;
 
     public static function _init()
     {
         self::$args = configs::args();
         self::$request_url = configs::request_url();
+        self::$sync_url = configs::sync_url();
 
         self::_get_uuid();
         self::_showQRCode();
@@ -47,6 +51,8 @@ class wechat_bot
         self::_wechat_notify();
         self::_wechat_get_contact();
         self::_get_group_list();
+        self::_testing_synccheck();
+        self::_listenMsgMode();
     }
 
     public static function _get_uuid()
@@ -145,7 +151,6 @@ class wechat_bot
             self::$wxsid = $vals[4]['value'];
             self::$skey  = $vals[3]['value'];
 
-
             self::$BaseRequest = array(
                 'BaseRequest'=>array(
                     'Uin'       => self::$wxuin,
@@ -170,7 +175,7 @@ class wechat_bot
 
         $args = self::$BaseRequest;
 
-        $res = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE));
+        $res = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE),false,true);
 
         $res = json_decode($res,true);
 
@@ -181,6 +186,12 @@ class wechat_bot
             self::$Synckey      = $res['SyncKey'];
             logger::notice('微信初始化成功');
             logger::info('记录微信初始化参数'.print_R($res,true));
+        }
+        else
+        {
+            logger::notice('微信初始化失败');
+            logger::info('微信初始化失败res'.print_r($res,true));
+            exit();
         }
     }
 
@@ -223,7 +234,7 @@ class wechat_bot
 
         $args['DeviceID'] = self::$DeviceID;
 
-        $res  = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE));
+        $res  = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE),false,false);
 
         $res  = json_decode($res,true);
 
@@ -278,7 +289,7 @@ class wechat_bot
 
         logger::info('开始记录获取群组参数'.print_r($args,true));
 
-        $res = requests::post($url,$args);
+        $res = requests::post($url,$args,false,false);
 
         $res = json_decode($res,true);
 
@@ -290,6 +301,112 @@ class wechat_bot
 
             logger::notice('获取群组成功');
         }
+    }
+
+    public static function _testing_synccheck()
+    {
+        logger::notice('正在进行同步线路测试');
+
+        $url = self::$sync_url;
+
+        foreach ($url as $idx=>$domain)
+        {
+            self::$syncHost = $domain;
+
+            $result = self::_synccheck();
+
+            if($result['retcode'] == 0)
+            {
+                self::$syncHost = $domain;
+                logger::notice(sprintf('线路：%s 请求成功',$domain));
+                break;
+            }
+            else
+            {
+                logger::notice(sprintf('线路：%s 请求失败,retcode:%s',$domain,$result['retcode']),'error');
+            }
+        }
+    }
+
+    public static function _synccheck()
+    {
+        $SyncKey_value = '';
+
+        foreach (self::$Synckey['List'] as $k=>$v)
+        {
+            $SyncKey_value.=$v['Key']."_".$v['Val']."|";
+        }
+
+        $SyncKey_value = trim($SyncKey_value,"|");
+
+        $args = array(
+            'r'         =>date::getTime(),
+            'skey'      =>self::$skey,
+            'sid'       =>self::$wxsid,
+            'uin'       =>self::$wxuin,
+            'deviceid'  =>self::$DeviceID,
+            'synckey'   =>$SyncKey_value,
+            '_'         =>date::getTime(),
+        );
+
+        $url = sprintf(self::$request_url['synccheck_url'],self::$syncHost,http_build_query($args));
+
+        $res = requests::get($url,null,false,true);
+
+        preg_match('/window.synccheck={retcode:"(.*)",selector:"(.*)"}/si',$res,$sync_code);
+
+        return array('retcode'=>$sync_code[1],'selector'=>$sync_code[2]);
+    }
+
+    public static function _listenMsgMode()
+    {
+        logger::notice('进入消息监听模式');
+
+        while(true)
+        {
+            $res = self::_synccheck();
+
+            if($res['retcode'] == '1100')
+            {
+                logger::notice('你在手机上退出了微信!');
+            }
+            else if($res['retcode'] == '1101')
+            {
+                logger::notice('你在其他地方登录了微信');
+            }
+            else if($res['retcode'] == '0')
+            {
+                if($res['selector'] == '2')
+                {
+                    $r = self::_synccheck();
+                    logger::notice('有新消息来啦~');
+                }
+                else if($res['selector'] == '6')
+                {
+                    logger::notice('红包来啦~');
+                }
+                else if($res['selector'] == '7')
+                {
+                    logger::notice('在手机上使用微信~');
+                    $r = self::_synccheck();
+                }
+                else if($res['selector'] == '0')
+                {
+                    sleep(1);
+                }
+            }
+            sleep(5);
+        }
+    }
+
+    public static function _webwxsync()
+    {
+        $url = sprintf(self::$request_url['webwxsync_url'],self::$wxsid,self::$skey,self::$pass_ticket);
+    }
+
+    public static function _handleMsg()
+    {
+
     }
 }
 

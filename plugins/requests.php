@@ -35,7 +35,7 @@ class requests
         return self::$ch;
     }
 
-    public static function request($url,$method,$args,$cookies=null)
+    public static function request($url,$method,$args,$is_save_cookies,$is_carry_cookies,$cookies=null)
     {
         $method = strtoupper($method);
 
@@ -43,6 +43,8 @@ class requests
         {
             $url = $url.(strpos($url, '?') === false ? '?' : '&').http_build_query($args);
         }
+
+        curl_setopt (self::$ch, CURLOPT_REFERER, "https://wx.qq.com/");
 
         if($method == 'POST')
         {
@@ -59,6 +61,14 @@ class requests
             curl_setopt(self::$ch, CURLOPT_POSTFIELDS,$args);
         }
 
+        if($is_save_cookies)
+        {
+            curl_setopt(self::$ch, CURLOPT_COOKIEJAR, '../logs/cookies.tmp');
+        }
+        if($is_carry_cookies)
+        {
+            curl_setopt(self::$ch, CURLOPT_COOKIEFILE, '../logs/cookies.tmp');
+        }
         if(strpos($url, 'https') !== false)
         {
             curl_setopt(self::$ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -86,17 +96,17 @@ class requests
         curl_close(self::$ch);
     }
 
-    public static function get($url,$args=null)
+    public static function get($url,$args=null,$is_save_cookies = false,$is_carry_cookies = false)
     {
         self::_init();
-        self::request($url,'get',$args);
+        self::request($url,'get',$args,$is_save_cookies,$is_carry_cookies);
         return self::$result;
     }
 
-    public static function post($url,$args)
+    public static function post($url,$args,$is_save_cookies = false,$is_carry_cookies = false)
     {
         self::_init();
-        self::request($url,'post',$args);
+        self::request($url,'post',$args,$is_save_cookies,$is_carry_cookies);
         return self::$result;
     }
 

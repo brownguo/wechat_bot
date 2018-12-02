@@ -27,6 +27,26 @@ class configs
              'notify_url'       =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxstatusnotify?pass_ticket=%s',
              'get_contact_url'  =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetcontact?pass_ticket=%s&skey=%s&r=%s',
              'get_group_url'    =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxbatchgetcontact?type=ex&r=%s&lang=zh_CN&pass_ticket=%s',
+             'synccheck_url'    =>  'https://%s/cgi-bin/mmwebwx-bin/synccheck?%s',
+             'webwxsync_url'    =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsync?sid=%s&skey=%s&pass_ticket=%s',
          );
+    }
+
+    public static function sync_url()
+    {
+        return array(
+            'wx2.qq.com',
+            'webpush.wx2.qq.com',
+            'wx8.qq.com',
+            'webpush.wx8.qq.com',
+            'web2.wechat.com',
+            'webpush.web2.wechat.com',
+            'webpush.web.wechat.com',
+            'webpush.weixin.qq.com',
+            'webpush.wechat.com',
+            'webpush1.wechat.com',
+            'webpush2.wechat.com',
+            'webpush.wx.qq.com',
+        );
     }
 }
