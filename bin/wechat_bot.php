@@ -32,6 +32,7 @@ class wechat_bot
     protected static $GroupList = array();        //群组列表
     protected static $PublicUsersList = array(); //公众号
     protected static $SpecialUsersList = array();
+    protected static $Synckey = array();
 
     public static function _init()
     {
@@ -177,9 +178,9 @@ class wechat_bot
         {
 
             self::$FromUserName = $res['User']['UserName'];
-
+            self::$Synckey      = $res['SyncKey'];
             logger::notice('微信初始化成功');
-            logger::info(print_R($res,true));
+            logger::info('记录微信初始化参数'.print_R($res,true));
         }
     }
 
@@ -208,7 +209,7 @@ class wechat_bot
         if($res['BaseResponse']['Ret'] == 0)
         {
             logger::notice('开启微信状态通知成功');
-            logger::info(print_r($res,true));
+            logger::info('记录开启微信状态通知参数'.print_r($res,true));
         }
     }
 
@@ -258,7 +259,7 @@ class wechat_bot
         {
             $_build_g_list[] = array(
                 'UserName'=>$v['UserName'],
-                'EncryChatRoomId'=>'',
+                'ChatRoomId'=>'',
             );
         }
 
@@ -270,23 +271,25 @@ class wechat_bot
                 'DeviceID'=>self::$DeviceID
             ),
             'Count'       =>count(self::$GroupList),
-            'List'        =>json_encode($_build_g_list,JSON_UNESCAPED_UNICODE),
+            'List'        =>$_build_g_list,
         );
-
-        logger::info('开始记录List');
-
-        logger::info(print_r($args,true));
 
         $args = json_encode($args,JSON_UNESCAPED_UNICODE);
 
-
+        logger::info('开始记录获取群组参数'.print_r($args,true));
 
         $res = requests::post($url,$args);
 
         $res = json_decode($res,true);
 
-        logger::info('开始记录postres');
-        logger::info(print_r($res,true));
+        logger::info('开始记录获取群组Result'.print_r($res,true));
+
+        if($res['BaseResponse']['Ret'] == 0)
+        {
+            self::$GroupList = $res['ContactList'];
+
+            logger::notice('获取群组成功');
+        }
     }
 }
 
