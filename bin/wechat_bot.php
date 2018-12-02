@@ -37,6 +37,11 @@ class wechat_bot
     protected static $Synckey = array();
     protected static $syncHost;
 
+    protected static $no_format_synckey;
+    protected static $SyncCheckKey;
+
+    protected static $lastCheckTimes;
+
     public static function _init()
     {
         self::$args = configs::args();
@@ -90,6 +95,7 @@ class wechat_bot
 
         if($res)
         {
+            logger::info('QRCode获取成功');
             logger::notice('QRCode获取成功');
         }
         else
@@ -160,7 +166,7 @@ class wechat_bot
                 )
             );
 
-            logger::info(print_r($vals,true));
+            logger::info('登录成功,'.json_encode(self::$BaseRequest));
             logger::notice('登录成功');
         }
         else
@@ -175,17 +181,26 @@ class wechat_bot
 
         $args = self::$BaseRequest;
 
-        $res = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE),false,true);
+        $res = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE),false,false);
 
         $res = json_decode($res,true);
 
         if($res['BaseResponse']['Ret'] == 0)
         {
-
             self::$FromUserName = $res['User']['UserName'];
-            self::$Synckey      = $res['SyncKey'];
+            self::$no_format_synckey = $res['SyncKey'];
+
+            $SyncKey_value = '';
+            foreach ($res['SyncKey']['List'] as $k=>$v)
+            {
+                $SyncKey_value.=$v['Key']."_".$v['Val']."|";
+            }
+            $SyncKey_value = trim($SyncKey_value,"|");
+
+            self::$Synckey = $SyncKey_value;
+
             logger::notice('微信初始化成功');
-            logger::info('记录微信初始化参数'.print_R($res,true));
+            logger::info('微信初始化成功');
         }
         else
         {
@@ -220,7 +235,11 @@ class wechat_bot
         if($res['BaseResponse']['Ret'] == 0)
         {
             logger::notice('开启微信状态通知成功');
-            logger::info('记录开启微信状态通知参数'.print_r($res,true));
+        }
+        else
+        {
+            logger::notice('开启微信状态通知失败');
+            logger::info('记录开启微信状态通知失败参数'.print_r($res,true));
         }
     }
 
@@ -238,8 +257,6 @@ class wechat_bot
 
         $res  = json_decode($res,true);
 
-        logger::info(print_r($res,true));
-
         if($res['BaseResponse']['Ret'] == 0)
         {
             self::$MemberCount = $res['MemberCount'];
@@ -256,8 +273,13 @@ class wechat_bot
                     array_push(self::$GroupList,$val);
                 }
             }
+            logger::info('好友列表获取成功');
             logger::notice(sprintf('共%s个好友,公众号:%s,群组:%s',self::$MemberCount,count(self::$PublicUsersList),
                 count(self::$GroupList)));
+        }
+        else
+        {
+            logger::info('好友列表获取失败'.print_r($res,true));
         }
     }
 
@@ -287,19 +309,19 @@ class wechat_bot
 
         $args = json_encode($args,JSON_UNESCAPED_UNICODE);
 
-        logger::info('开始记录获取群组参数'.print_r($args,true));
-
         $res = requests::post($url,$args,false,false);
 
         $res = json_decode($res,true);
 
-        logger::info('开始记录获取群组Result'.print_r($res,true));
-
         if($res['BaseResponse']['Ret'] == 0)
         {
             self::$GroupList = $res['ContactList'];
-
             logger::notice('获取群组成功');
+        }
+        else
+        {
+            logger::info('开始记录获取群组失败参数'.print_r($args,true));
+            logger::info('开始记录获取群组失败Result'.print_r($res,true));
         }
     }
 
@@ -318,11 +340,13 @@ class wechat_bot
             if($result['retcode'] == 0)
             {
                 self::$syncHost = $domain;
+                logger::info(sprintf('线路：%s 请求成功',$domain));
                 logger::notice(sprintf('线路：%s 请求成功',$domain));
                 break;
             }
             else
             {
+                logger::info(sprintf('线路：%s 请求失败',$domain));
                 logger::notice(sprintf('线路：%s 请求失败,retcode:%s',$domain,$result['retcode']),'error');
             }
         }
@@ -330,14 +354,6 @@ class wechat_bot
 
     public static function _synccheck()
     {
-        $SyncKey_value = '';
-
-        foreach (self::$Synckey['List'] as $k=>$v)
-        {
-            $SyncKey_value.=$v['Key']."_".$v['Val']."|";
-        }
-
-        $SyncKey_value = trim($SyncKey_value,"|");
 
         $args = array(
             'r'         =>date::getTime(),
@@ -345,7 +361,7 @@ class wechat_bot
             'sid'       =>self::$wxsid,
             'uin'       =>self::$wxuin,
             'deviceid'  =>self::$DeviceID,
-            'synckey'   =>$SyncKey_value,
+            'synckey'   =>self::$Synckey,
             '_'         =>date::getTime(),
         );
 
@@ -364,6 +380,8 @@ class wechat_bot
 
         while(true)
         {
+            self::$lastCheckTimes = time();
+
             $res = self::_synccheck();
 
             if($res['retcode'] == '1100')
@@ -378,8 +396,13 @@ class wechat_bot
             {
                 if($res['selector'] == '2')
                 {
-                    $r = self::_synccheck();
+                    $r = self::_webwxsync();
                     logger::notice('有新消息来啦~');
+
+                    if(!empty($r))
+                    {
+                        self::_handleMsg($r);
+                    }
                 }
                 else if($res['selector'] == '6')
                 {
@@ -388,25 +411,112 @@ class wechat_bot
                 else if($res['selector'] == '7')
                 {
                     logger::notice('在手机上使用微信~');
-                    $r = self::_synccheck();
+                    $r = self::_webwxsync();
                 }
                 else if($res['selector'] == '0')
                 {
                     sleep(1);
                 }
             }
-            sleep(5);
+
+            if((time() - self::$lastCheckTimes) <= 20)
+            {
+                sleep(time() - self::$lastCheckTimes);
+            }
         }
     }
 
     public static function _webwxsync()
     {
         $url = sprintf(self::$request_url['webwxsync_url'],self::$wxsid,self::$skey,self::$pass_ticket);
+
+        $args = array(
+            'BaseRequest'=>array(
+                'Uin'     =>self::$wxuin,
+                'Sid'     =>self::$wxsid,
+                'Skey'    =>self::$skey,
+                'DeviceID'=>self::$DeviceID
+            ),
+            'SyncKey'     =>self::$no_format_synckey,
+            'rr'          =>~(int)time(),
+        );
+
+        $res = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE),false,false);
+
+        $res = json_decode($res,true);
+
+        if($res['BaseResponse']['Ret'] == 0)
+        {
+            self::$no_format_synckey = $res['SyncKey'];
+            self::$SyncCheckKey = $res['SyncCheckKey'];
+            return $res;
+        }
+        else
+        {
+            logger::info('_webwxsync请求失败,记录日志:'.print_r($res,true).'args:'.print_r($args));
+            return false;
+        }
     }
 
-    public static function _handleMsg()
+    public static function _handleMsg($res)
     {
+        foreach ($res['AddMsgList'] as $k=>$v)
+        {
+            $msgType = $v['MsgType'];
+            $content = $v['Content'];
+            $msgid   = $v['MsgId'];
 
+            if($msgType == 1)
+            {
+                print_R($content);
+            }
+            else if($msgType == 3)  //图片
+            {
+                print_R($content);
+
+            }
+            else if($msgType == 34) //语音
+            {
+                print_R($content);
+
+            }
+            else if($msgType == 42) //名片
+            {
+                print_R($content);
+
+            }
+            else if($msgType == 47) //动画表情
+            {
+                print_R($content);
+
+            }
+            else if($msgType == 49) //链接
+            {
+                print_R($content);
+
+            }
+            else if($msgType == 51)
+            {
+                print_R($content);
+
+            }
+            else if($msgType == 62) //小视频
+            {
+                print_R($content);
+
+            }
+            else if($msgType == 10002)  //撤回了消息
+            {
+                print_R($content);
+
+            }
+            else
+            {
+                print_R($content);
+
+                //表情,链接,红包
+            }
+        }
     }
 }
 

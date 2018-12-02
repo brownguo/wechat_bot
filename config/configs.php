@@ -40,13 +40,13 @@ class configs
             'wx8.qq.com',
             'webpush.wx8.qq.com',
             'web2.wechat.com',
+            'webpush.wx.qq.com',
             'webpush.web2.wechat.com',
             'webpush.web.wechat.com',
             'webpush.weixin.qq.com',
             'webpush.wechat.com',
             'webpush1.wechat.com',
             'webpush2.wechat.com',
-            'webpush.wx.qq.com',
         );
     }
 }
