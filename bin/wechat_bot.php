@@ -142,7 +142,7 @@ class wechat_bot
 
     public static function _do_login()
     {
-        $res = requests::get(self::$redirect_uri);
+        $res = requests::get(self::$redirect_uri,null,true,false);
 
         $p = xml_parser_create();
         xml_parse_into_struct($p, $res, $vals, $key);
@@ -398,11 +398,7 @@ class wechat_bot
                 {
                     $r = self::_webwxsync();
                     logger::notice('有新消息来啦~');
-
-                    if(!empty($r))
-                    {
-                        self::_handleMsg($r);
-                    }
+                    self::_handleMsg($r);
                 }
                 else if($res['selector'] == '6')
                 {
@@ -453,6 +449,7 @@ class wechat_bot
         }
         else
         {
+            logger::notice('_webwxsync请求失败');
             logger::info('_webwxsync请求失败,记录日志:'.print_r($res,true).'args:'.print_r($args));
             return false;
         }
