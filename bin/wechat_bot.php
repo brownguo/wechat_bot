@@ -496,45 +496,97 @@ class wechat_bot
             if($msgType == 1)
             {
                 self::_showMsg($msg);
-                logger::notice(sprintf('收到来自[%s]的消息,内容为:%s',$name,$content));
             }
             else if($msgType == 3)  //图片
             {
-                logger::notice(sprintf('收到来自[%s]的图片消息,图片一会儿在开发',$name));
+                logger::notice(sprintf('收到来自[%s]的图片消息',$name));
             }
             else if($msgType == 34) //语音
             {
-                logger::notice(sprintf('收到来自[%s]的语音消息,语音一会儿在开发',$name));
+                logger::info('记录语音消息数组格式'.print_r($res,true));
+                logger::notice(sprintf('收到来自[%s]的语音消息',$name));
             }
             else if($msgType == 42) //名片
             {
-                logger::notice(sprintf('收到来自[%s]的名片消息,名片一会儿在开发',$name));
+                logger::notice(sprintf('收到来自[%s]的名片消息',$name));
+                $card_info = $msg['RecommendInfo'];
+                echo "----------------------------".PHP_EOL;
+                echo "昵称：".$card_info['NickName'].PHP_EOL;
+                echo "微信号:".$card_info['Alias'].PHP_EOL;
+                echo "性别:".$card_info['Sex'].PHP_EOL;
+                echo "地区:".$card_info['Province'].PHP_EOL;
+                echo "----------------------------".PHP_EOL;
             }
             else if($msgType == 47) //动画表情
             {
-                logger::notice(sprintf('收到来自[%s]的动画消息,动画一会儿在开发',$name));
+                logger::notice(sprintf('收到来自[%s]的动画消息',$name));
             }
             else if($msgType == 49) //链接
             {
-                logger::notice(sprintf('收到来自[%s]的链接消息,链接一会儿在开发',$name));
+                logger::notice(sprintf('收到来自[%s]的链接消息',$name));
+                echo "----------------------------".PHP_EOL;
+                echo "标题：".$msg['FileName'].PHP_EOL;
+                echo "URL：".$msg['Url'].PHP_EOL;
+                echo "----------------------------".PHP_EOL;
             }
             else if($msgType == 51)
             {
-                logger::notice(sprintf('收到来自[%s]的链接消息,链接2一会儿在开发',$name));
+                logger::notice(sprintf('成功获取[%s]的最近联系人',$name));
             }
             else if($msgType == 62) //小视频
             {
-                logger::notice(sprintf('收到来自[%s]的小视频消息,链接2一会儿在开发',$name));
+                logger::notice(sprintf('收到来自[%s]的小视频消息',$name));
             }
             else if($msgType == 10002)  //撤回了消息
             {
-                logger::notice(sprintf('收到来自[%s]的撤回消息,链接2一会儿在开发',$name));
+                logger::notice(sprintf('收到来自[%s]的撤回消息',$name));
             }
             else
             {
-                logger::notice(sprintf('收到来自[%s]的红包消息,链接2一会儿在开发',$name));
+                logger::notice(sprintf('收到来自[%s]的红包消息',$name));
                 //表情,链接,红包
             }
+        }
+    }
+
+    public static function _webwxsendmsg($Content,$ToUserName='filehelper')
+    {
+        $url = sprintf(self::$request_url['send_msg_url'],self::$pass_ticket);
+
+        logger::info('_webwxsendmsgUrl:'.$url);
+
+        $ClientMsgId = date::getTime().rand(1000,9999);
+
+        $args = array(
+            'BaseRequest'=>array(
+                'Uin'     =>self::$wxuin,
+                'Sid'     =>self::$wxsid,
+                'Skey'    =>self::$skey,
+                'DeviceID'=>self::$DeviceID
+            ),
+            'Msg' =>array(
+                'Type'=>1,
+                'Content'=>$Content,
+                'FromUserName'=>self::$FromUserName,//自己的ID
+                'ToUserName'=>$ToUserName,
+                'LocalID'=>$ClientMsgId,
+                'ClientMsgId'=>$ClientMsgId,//时间戳左移4位随后补上4位随机数
+            )
+        );
+
+        logger::info('开始记录发送消息参数'.json_encode($args,JSON_UNESCAPED_UNICODE));
+        $res = requests::post($url,json_encode($args,JSON_UNESCAPED_UNICODE),false,false);
+        $res = json_decode($res,true);
+
+        if($res['BaseResponse']['Ret'] == 0)
+        {
+            logger::info(sprintf('给%s发送的消息成功,发送的内容是:%s',self::_getUserRemarkName($ToUserName),$Content));
+            logger::notice('消息自动回复发送成功');
+        }
+        else
+        {
+            logger::info('记录消息发送失败日志:'.print_r($res,true));
+            logger::notice('消息发送失败');
         }
     }
 
@@ -555,11 +607,23 @@ class wechat_bot
         if(strpos($msg['FromUserName'],'@@') !== false)
         {
             $member_id = explode(':<br/>',$content);
+
             $srcName = self::_getUserRemarkName($member_id[0]);
-            $dstName = 'GROUP';
+            $dstName = self::_getGroupName($msg['FromUserName']);
+
+            logger::notice(sprintf('收到来自[%s]群里[%s]同学的消息,消息内容:%s',strip_tags($dstName),strip_tags($srcName),$member_id[1]),'purple');
+            //echo strip_tags($srcName).'|'.$dstName.'|'.$member_id[1].'|'.$msg_id.PHP_EOL;
         }
-        echo $srcName.'|'.$dstName.'|'.$content.'|'.$msg_id.PHP_EOL;
+        else
+        {
+            logger::notice(sprintf('收到来自[%s]同学的消息,消息内容:%s',strip_tags($srcName),strip_tags($content)),'purple');
+
+            $send_content = '你好,朋友！当前时间：'.date('Y-m-d H:i:s',time());
+            self::_webwxsendmsg($send_content,$msg['FromUserName']);
+        }
     }
+
+
     public static function _getUserRemarkName($user_id)
     {
         if ($user_id == self::$User['UserName'])
@@ -610,7 +674,8 @@ class wechat_bot
                 }
             }
         }
-        return $name;
+        //不知道为毛会undefined.
+        return @$name;
     }
 
     public static function _getGroupName($group_id)

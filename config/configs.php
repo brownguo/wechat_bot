@@ -29,6 +29,7 @@ class configs
              'get_group_url'    =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxbatchgetcontact?type=ex&r=%s&lang=zh_CN&pass_ticket=%s',
              'synccheck_url'    =>  'https://%s/cgi-bin/mmwebwx-bin/synccheck?%s',
              'webwxsync_url'    =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsync?sid=%s&skey=%s&pass_ticket=%s',
+             'send_msg_url'     =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg?pass_ticket=%s',
          );
     }
 
