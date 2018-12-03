@@ -28,7 +28,9 @@ class wechat_bot
     protected static $BaseRequest = array();
     protected static $DeviceID;
     protected static $FromUserName;
+    protected static $User;
 
+    protected static $GroupMemeberList = array();
     protected static $MemberCount;
     protected static $ContactList = array();//联系人列表
     protected static $GroupList = array();        //群组列表
@@ -188,16 +190,12 @@ class wechat_bot
         if($res['BaseResponse']['Ret'] == 0)
         {
             self::$FromUserName = $res['User']['UserName'];
+
             self::$no_format_synckey = $res['SyncKey'];
 
-            $SyncKey_value = '';
-            foreach ($res['SyncKey']['List'] as $k=>$v)
-            {
-                $SyncKey_value.=$v['Key']."_".$v['Val']."|";
-            }
-            $SyncKey_value = trim($SyncKey_value,"|");
+            self::$User = $res['User'];
 
-            self::$Synckey = $SyncKey_value;
+            self::$Synckey = self::_format_synckey($res['SyncKey']['List']);
 
             logger::notice('微信初始化成功');
             logger::info('微信初始化成功');
@@ -205,7 +203,7 @@ class wechat_bot
         else
         {
             logger::notice('微信初始化失败');
-            logger::info('微信初始化失败res'.print_r($res,true));
+            logger::info(sprintf('微信初始化失败res:%s,Args:%s',print_r($res,true),print_r($args,true)));
             exit();
         }
     }
@@ -315,6 +313,14 @@ class wechat_bot
 
         if($res['BaseResponse']['Ret'] == 0)
         {
+            foreach ($res['ContactList'] as $k=>$memberList)
+            {
+                foreach ($memberList as $member)
+                {
+                    array_push(self::$GroupMemeberList,$member);
+                }
+            }
+
             self::$GroupList = $res['ContactList'];
             logger::notice('获取群组成功');
         }
@@ -354,6 +360,10 @@ class wechat_bot
 
     public static function _synccheck()
     {
+        $call_func_info = debug_backtrace();
+
+        logger::info(sprintf('方法%s在%s行调用了%s',$call_func_info[1]['function'],
+            $call_func_info[1]['line'],$call_func_info[0]['function']));
 
         $args = array(
             'r'         =>date::getTime(),
@@ -386,23 +396,23 @@ class wechat_bot
 
             if($res['retcode'] == '1100')
             {
-                logger::notice('你在手机上退出了微信!');
+                logger::notice('你在手机上退出了微信! See u !');exit(0);
             }
             else if($res['retcode'] == '1101')
             {
-                logger::notice('你在其他地方登录了微信');
+                logger::notice('你在其他地方登录了微信,See u !');exit();
             }
             else if($res['retcode'] == '0')
             {
                 if($res['selector'] == '2')
                 {
                     $r = self::_webwxsync();
-                    logger::notice('有新消息来啦~');
                     self::_handleMsg($r);
                 }
                 else if($res['selector'] == '6')
                 {
                     logger::notice('红包来啦~');
+                    $r = self::_webwxsync();
                 }
                 else if($res['selector'] == '7')
                 {
@@ -443,76 +453,191 @@ class wechat_bot
 
         if($res['BaseResponse']['Ret'] == 0)
         {
+            logger::info('_webwxsync请求成功,synckey:'.json_encode($res['SyncKey'],JSON_UNESCAPED_UNICODE));
+
             self::$no_format_synckey = $res['SyncKey'];
+            self::$Synckey = self::_format_synckey($res['SyncKey']['List']);
             self::$SyncCheckKey = $res['SyncCheckKey'];
             return $res;
         }
         else
         {
             logger::notice('_webwxsync请求失败');
-            logger::info('_webwxsync请求失败,记录日志:'.print_r($res,true).'args:'.print_r($args));
+            logger::info('_webwxsync请求失败,记录日志:%s,_webwxsync请求失败args:%s',print_r($res,true),print_r($args));
             return false;
         }
     }
 
+    public static function _format_synckey($synckey_arr)
+    {
+        $call_func_info = debug_backtrace();
+
+        logger::info(sprintf('方法%s在%s行调用了%s',$call_func_info[1]['function'],
+            $call_func_info[1]['line'],$call_func_info[0]['function']));
+
+        $SyncKey_value = '';
+        foreach ($synckey_arr as $k=>$v)
+        {
+            $SyncKey_value.=$v['Key']."_".$v['Val']."|";
+        }
+        $SyncKey_value = trim($SyncKey_value,"|");
+        return $SyncKey_value;
+    }
+
     public static function _handleMsg($res)
     {
-        foreach ($res['AddMsgList'] as $k=>$v)
+        foreach ($res['AddMsgList'] as $k=>$msg)
         {
-            $msgType = $v['MsgType'];
-            $content = $v['Content'];
-            $msgid   = $v['MsgId'];
+            $msgType = $msg['MsgType'];
+            $content = $msg['Content'];
+            $msgid   = $msg['MsgId'];
+            $name    = self::_getUserRemarkName($msg['FromUserName']);
 
             if($msgType == 1)
             {
-                print_R($content);
+                logger::notice(sprintf('收到来自[%s]的消息,内容为:%s',$name,$content));
             }
             else if($msgType == 3)  //图片
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的图片消息,图片一会儿在开发',$name));
             }
             else if($msgType == 34) //语音
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的语音消息,语音一会儿在开发',$name));
             }
             else if($msgType == 42) //名片
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的名片消息,名片一会儿在开发',$name));
             }
             else if($msgType == 47) //动画表情
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的动画消息,动画一会儿在开发',$name));
             }
             else if($msgType == 49) //链接
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的链接消息,链接一会儿在开发',$name));
             }
             else if($msgType == 51)
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的链接消息,链接2一会儿在开发',$name));
             }
             else if($msgType == 62) //小视频
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的小视频消息,链接2一会儿在开发',$name));
             }
             else if($msgType == 10002)  //撤回了消息
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的撤回消息,链接2一会儿在开发',$name));
             }
             else
             {
-                print_R($content);
-
+                logger::notice(sprintf('收到来自[%s]的红包消息,链接2一会儿在开发',$name));
                 //表情,链接,红包
             }
+        }
+    }
+
+    public static function _getUserRemarkName($user_id)
+    {
+        if ($user_id == self::$User['UserName'])
+        {
+            return self::$User['NickName']; //自己
+        }
+        if(strpos($user_id,'@@') !== false)
+        {
+            $name = self::_getGroupName($user_id);
+        }
+        else
+        {
+            foreach (self::$PublicUsersList as $k=>$member)
+            {
+                if($member['UserName'] == $user_id)
+                {
+                    if(!empty($member['RemarkName']))
+                        $name = $member['RemarkName'];
+                    else
+                        $name = $member['NickName'];
+                }
+            }
+
+            foreach (self::$ContactList as $k=>$member)
+            {
+                if($member['UserName'] == $user_id)
+                {
+                    if(!empty($member['RemarkName']))
+                        $name = $member['RemarkName'];
+                    else
+                        $name = $member['NickName'];
+                }
+            }
+        }
+        return $name;
+    }
+
+    public static function _getGroupName($group_id)
+    {
+        $name = '未知群';
+
+        foreach (self::$GroupList as $k=>$member)
+        {
+            if($member['UserName'] == $group_id)
+            {
+                $name = $member['NickName'];
+            }
+        }
+        if($name == '未知群')
+        {
+            $group_list = self::_getNameById($group_id);
+            foreach ($group_list as $k=>$group)
+            {
+                array_push(self::$GroupList,$group);
+                if($group['UserName'] == $group_id)
+                {
+                    $name       = $group['NickName'];
+                    $MemberList = $group['MemberList'];
+
+                    foreach ($MemberList as $key=>$member)
+                    {
+                        array_push(self::$GroupMemeberList,$member);
+                    }
+                }
+            }
+        }
+        return $name;
+    }
+
+    public static function _getNameById($id)
+    {
+        $url = sprintf(self::$request_url['get_group_url'],date::getTime(),self::$pass_ticket);
+
+        $_build_g_list[] = array(
+            'UserName'=>$id,
+            'ChatRoomId'=>'',
+        );
+        $args = array(
+            'BaseRequest'=>array(
+                'Uin'     =>self::$wxuin,
+                'Sid'     =>self::$wxsid,
+                'Skey'    =>self::$skey,
+                'DeviceID'=>self::$DeviceID
+            ),
+            'Count'       =>count($_build_g_list),
+            'List'        =>$_build_g_list
+        );
+
+        $args = json_encode($args,JSON_UNESCAPED_UNICODE);
+
+        $res = requests::post($url,$args,false,false);
+
+        $res = json_decode($res,true);
+
+        if($res['BaseResponse']['Ret'] == 0)
+        {
+            return $res['ContactList'];
+        }
+        else
+        {
+            logger::info('获取群组失败了Args:%sRes:%s',print_r($args,true),print_r($res));
         }
     }
 }
