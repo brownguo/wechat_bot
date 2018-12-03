@@ -315,7 +315,7 @@ class wechat_bot
         {
             foreach ($res['ContactList'] as $k=>$memberList)
             {
-                foreach ($memberList as $member)
+                foreach ($memberList['MemberList'] as $member)
                 {
                     array_push(self::$GroupMemeberList,$member);
                 }
@@ -495,6 +495,7 @@ class wechat_bot
 
             if($msgType == 1)
             {
+                self::_showMsg($msg);
                 logger::notice(sprintf('收到来自[%s]的消息,内容为:%s',$name,$content));
             }
             else if($msgType == 3)  //图片
@@ -537,6 +538,28 @@ class wechat_bot
         }
     }
 
+    public static function _showMsg($msg)
+    {
+        $srcName = self::_getUserRemarkName($msg['FromUserName']);
+
+        $dstName = self::_getUserRemarkName($msg['ToUserName']);
+
+        $content = $msg['Content'];
+        $msg_id  = $msg['MsgId'];
+
+        if($msg['ToUserName'] == 'filehelper')
+        {
+            $dstName = '文件传输助手';
+        }
+        //群消息
+        if(strpos($msg['FromUserName'],'@@') !== false)
+        {
+            $member_id = explode(':<br/>',$content);
+            $srcName = self::_getUserRemarkName($member_id[0]);
+            $dstName = 'GROUP';
+        }
+        echo $srcName.'|'.$dstName.'|'.$content.'|'.$msg_id.PHP_EOL;
+    }
     public static function _getUserRemarkName($user_id)
     {
         if ($user_id == self::$User['UserName'])
@@ -568,6 +591,22 @@ class wechat_bot
                         $name = $member['RemarkName'];
                     else
                         $name = $member['NickName'];
+                }
+            }
+
+            foreach (self::$GroupMemeberList as $k=>$member)
+            {
+
+                if($member['UserName'] == $user_id)
+                {
+                    if(!empty($member['DisplayName']))
+                    {
+                        $name = $member['DisplayName'];
+                    }
+                    else
+                    {
+                        $member['NickName'];
+                    }
                 }
             }
         }
