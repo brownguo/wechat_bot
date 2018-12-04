@@ -44,12 +44,15 @@ class wechat_bot
 
     protected static $lastCheckTimes;
 
+    protected static $autoReply = true;
+    protected static $autoReplyApiKey = '942e7bed04254e4bb1f163315124b182';
+    protected static $autoText;
+
     public static function _init()
     {
         self::$args = configs::args();
         self::$request_url = configs::request_url();
         self::$sync_url = configs::sync_url();
-
         self::_get_uuid();
         self::_showQRCode();
         self::_waitForLogin();
@@ -62,6 +65,22 @@ class wechat_bot
         self::_listenMsgMode();
     }
 
+    public static function _tulingBot($text)
+    {
+        $url = sprintf(self::$request_url['tuling_bot_url'],self::$autoReplyApiKey,$text);
+
+        $res = requests::get($url);
+        $res = json_decode($res,true);
+        if($res['code'] == '100000')
+        {
+            self::$autoText = $res['text'];
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
     public static function _get_uuid()
     {
         $url = self::$request_url['get_uuid_url'];
@@ -618,11 +637,17 @@ class wechat_bot
         {
             logger::notice(sprintf('收到来自[%s]同学的消息,消息内容:%s',strip_tags($srcName),strip_tags($content)),'purple');
 
-            $send_content = '你好,朋友！当前时间：'.date('Y-m-d H:i:s',time());
-            self::_webwxsendmsg($send_content,$msg['FromUserName']);
+            //开启自动回复
+            if(self::$autoReply)
+            {
+                if(self::_tulingBot($content))
+                {
+                    logger::info(sprintf('自动回复[%s]的消息,内容:%s',strip_tags($srcName),$content));
+                    self::_webwxsendmsg(self::$autoText,$msg['FromUserName']);
+                }
+            }
         }
     }
-
 
     public static function _getUserRemarkName($user_id)
     {

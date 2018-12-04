@@ -30,6 +30,7 @@ class configs
              'synccheck_url'    =>  'https://%s/cgi-bin/mmwebwx-bin/synccheck?%s',
              'webwxsync_url'    =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsync?sid=%s&skey=%s&pass_ticket=%s',
              'send_msg_url'     =>  'https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg?pass_ticket=%s',
+             'tuling_bot_url'   =>  'http://www.tuling123.com/openapi/api?key=%s&info=%s',
          );
     }
 
