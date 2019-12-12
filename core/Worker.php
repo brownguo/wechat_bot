@@ -8,9 +8,15 @@
 
 class Worker
 {
+
+    protected static $master_pid  = 0;
+    protected static $worker_pids = array();
+
     public static function init()
     {
+        self::$master_pid = posix_getpid();
         self::installSignal();
+        self::for_one_worker();
         self::run();
     }
 
@@ -23,9 +29,9 @@ class Worker
     }
     protected static function installSignal()
     {
-        pcntl_signal(SIGINT,array('Worker','signalHandler'));
-        pcntl_signal(SIGUSR1,array('Worker','signalHandler'));
-        pcntl_signal(SIGUSR2,array('Worker','signalHandler'));
+        pcntl_signal(SIGINT,array('Worker','signalHandler'),false);
+        pcntl_signal(SIGUSR1,array('Worker','signalHandler'),false);
+        pcntl_signal(SIGUSR2,array('Worker','signalHandler'),false);
     }
 
     public static function signalHandler($signal)
@@ -43,6 +49,12 @@ class Worker
                 echo 'debug'.PHP_EOL;
                 break;
         }
+    }
+
+    protected static function for_one_worker()
+    {
+        $pid = pcntl_fork();
+        print_r($pid);
     }
 }
 
