@@ -16,12 +16,14 @@ class Worker
     {
         self::$master_pid = posix_getpid();
         self::installSignal();
-        self::for_one_worker();
+        #self::for_one_worker();
+        self::createWorkers();
         self::run();
     }
 
     protected static function run()
     {
+        print_r(self::$worker_pids);
         while(true)
         {
             pcntl_signal_dispatch();
@@ -51,10 +53,51 @@ class Worker
         }
     }
 
-    protected static function for_one_worker()
+    protected static function set_process_title($title)
+    {
+        if (!empty($title))
+        {
+            // 需要扩展
+            if(extension_loaded('proctitle') && function_exists('setproctitle'))
+            {
+                @setproctitle($title);
+            }
+            // >=php 5.5
+            elseif (function_exists('cli_set_process_title'))
+            {
+                @cli_set_process_title($title);
+            }
+        }
+    }
+
+    protected static function createWorkers()
+    {
+        for($i=1;$i<=5;$i++)
+        {
+            #echo $i.PHP_EOL;
+            self::for_one_worker($i);
+        }
+    }
+    protected static function for_one_worker($worker_id)
     {
         $pid = pcntl_fork();
-        print_r($pid);
+
+        //主进程记录子进程pid
+        if($pid > 0)
+        {
+            self::set_process_title(sprintf('PHPServerd Pid[%s]',$pid));
+            self::$worker_pids[$worker_id] = $pid;
+        }
+        //子进程运行
+        elseif($pid == 0)
+        {
+            exit(0);
+        }
+        //出错退出
+        else
+        {
+            exit('fork worker fail!');
+        }
     }
 }
 
