@@ -103,7 +103,6 @@ class Worker
             exit('Create Channel Fail!');
         }
 
-
         $pid = pcntl_fork();
 
         //主进程记录子进程pid,当前上线文为Master
@@ -112,21 +111,23 @@ class Worker
             fclose($channel[1]);
             self::$channels[$pid] = $channel[0];
             self::$worker_pids[$worker_id] = $pid;
-            unset($channel);
+            #unset($channel);
 
             //test
             fwrite(self::$channels[$pid], "TEST PID: $pid\n");
-            var_dump(self::$channels[$pid]);
             var_dump(fgets(self::$channels[$pid]));  //这里不知道为什么收不到消息，日他妈的！
-            fclose(self::$channels[$pid]);
             exit(0);
             return $pid;
         }
         //子进程运行,当前上下文为Worker
         elseif($pid == 0)
         {
-            file_put_contents('../logs/wechat_bot.log',date('Y-m-d H:i:s').'WorkerPid['.posix_getpid().']'.PHP_EOL,FILE_APPEND);
-            #self::set_process_title(sprintf('PHPServerd Pid[%s]',$pid));
+            //test
+            fclose($channel[0]);
+            fwrite($channel[1],"Message From Worker!\n");
+            echo fgets($channel[1]);
+            #file_put_contents('../logs/wechat_bot.log',date('Y-m-d H:i:s').'WorkerPid['.posix_getpid().']'.PHP_EOL,FILE_APPEND);
+            #self::set_process_title(sprin  tf('PHPServerd Pid[%s]',$pid));
             exit(0);
         }
         //出错退出,-1
