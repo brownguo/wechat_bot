@@ -83,8 +83,9 @@ class Worker
             return false;
         }
 
-        stream_set_blocking($channel[0], 0);
-        stream_set_blocking($channel[1], 0);
+        #非阻塞模式
+        #stream_set_blocking($channel[0], 0);
+        #stream_set_blocking($channel[1], 0);
         return $channel;
     }
 
@@ -114,8 +115,8 @@ class Worker
             #unset($channel);
 
             //test
-            fwrite(self::$channels[$pid], "TEST PID: $pid\n");
-            var_dump(fgets(self::$channels[$pid]));  //这里不知道为什么收不到消息，日他妈的！
+            fwrite($channel[0], "TEST PID: $pid\n");
+            echo (fgets($channel[0]));  //这里不知道为什么收不到消息，日他妈的！
             exit(0);
             return $pid;
         }
