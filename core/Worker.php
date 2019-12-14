@@ -9,8 +9,12 @@
 class Worker
 {
 
+    //MasterID
     protected static $master_pid  = 0;
+    //所有子进程
     protected static $worker_pids = array();
+    //master与worker之间通信管道
+    protected static $channels = array();
 
     public static function init()
     {
@@ -23,7 +27,7 @@ class Worker
 
     protected static function run()
     {
-        print_r(self::$worker_pids);
+        print_r(self::$channels);
         while(true)
         {
             pcntl_signal_dispatch();
@@ -86,10 +90,7 @@ class Worker
 
     protected static function createWorkers()
     {
-
-        var_dump(self::createChannel());
-        exit(0);
-        for($i=1;$i<=2;$i++)
+        for($i=0;$i<2;$i++)
         {
             #echo $i.PHP_EOL;
             self::for_one_worker($i);
@@ -97,12 +98,29 @@ class Worker
     }
     protected static function for_one_worker($worker_id)
     {
+        if(!($channel = self::createChannel()))
+        {
+            exit('Create Channel Fail!');
+        }
+
+
         $pid = pcntl_fork();
 
         //主进程记录子进程pid,当前上线文为Master
         if($pid > 0)
         {
+            fclose($channel[1]);
+            self::$channels[$pid] = $channel[0];
             self::$worker_pids[$worker_id] = $pid;
+            unset($channel);
+
+            //test
+            fwrite(self::$channels[$pid], "TEST PID: $pid\n");
+            var_dump(self::$channels[$pid]);
+            var_dump(fgets(self::$channels[$pid]));  //这里不知道为什么收不到消息，日他妈的！
+            fclose(self::$channels[$pid]);
+            exit(0);
+            return $pid;
         }
         //子进程运行,当前上下文为Worker
         elseif($pid == 0)
