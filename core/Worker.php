@@ -115,9 +115,9 @@ class Worker
             #unset($channel);
 
             //test
-            fwrite($channel[0], "TEST PID: $pid\n");
+            fwrite(self::$channels[$pid], "TEST PID: $pid\n");
             sleep(1);
-            echo (fgets($channel[0]));  //这里不知道为什么收不到消息，日他妈的！
+            echo (fgets(self::$channels[$pid]));  //这里不知道为什么收不到消息，日他妈的！
             exit(0);
             return $pid;
         }
