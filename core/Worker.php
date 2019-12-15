@@ -84,8 +84,8 @@ class Worker
         }
 
         #非阻塞模式
-        #stream_set_blocking($channel[0], 0);
-        #stream_set_blocking($channel[1], 0);
+        stream_set_blocking($channel[0], 0);
+        stream_set_blocking($channel[1], 0);
         return $channel;
     }
 
@@ -116,6 +116,7 @@ class Worker
 
             //test
             fwrite($channel[0], "TEST PID: $pid\n");
+            sleep(1);
             echo (fgets($channel[0]));  //这里不知道为什么收不到消息，日他妈的！
             exit(0);
             return $pid;
@@ -126,6 +127,7 @@ class Worker
             //test
             fclose($channel[0]);
             fwrite($channel[1],"Message From Worker!\n");
+            sleep(1);
             echo fgets($channel[1]);
             #file_put_contents('../logs/wechat_bot.log',date('Y-m-d H:i:s').'WorkerPid['.posix_getpid().']'.PHP_EOL,FILE_APPEND);
             #self::set_process_title(sprin  tf('PHPServerd Pid[%s]',$pid));
