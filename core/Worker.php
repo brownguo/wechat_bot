@@ -22,12 +22,11 @@ class Worker
         self::installSignal();
         #self::for_one_worker();
         self::createWorkers();
-        #self::run();
+        self::run();
     }
 
     protected static function run()
     {
-        print_r(self::$channels);
         while(true)
         {
             pcntl_signal_dispatch();
@@ -45,6 +44,7 @@ class Worker
         switch ($signal)
         {
             case SIGINT:
+                self::stop_all_worker();
                 echo sprintf("[%s] process,killed .. \n",getmypid());
                 exit(0);
                 break;
@@ -54,6 +54,15 @@ class Worker
             case SIGUSR2:
                 echo 'debug'.PHP_EOL;
                 break;
+        }
+    }
+
+    #停止所有进程，如果当前任务没有执行完成，ctrl+c之后子进程的会没有人接管变为1。
+    protected static function stop_all_worker()
+    {
+        foreach (self::$worker_pids as $worker_pid)
+        {
+            posix_kill($worker_pid,SIGINT);
         }
     }
 
@@ -109,34 +118,32 @@ class Worker
         //主进程记录子进程pid,当前上线文为Master
         if($pid > 0)
         {
-            fclose($channel[1]);
             self::$channels[$pid] = $channel[0];
             self::$worker_pids[$worker_id] = $pid;
             #unset($channel);
-
-            //test
-            fwrite(self::$channels[$pid], "TEST PID: $pid\n");
-            sleep(1);
-            echo (fgets(self::$channels[$pid]));  //这里不知道为什么收不到消息，日他妈的！
-            exit(0);
-            return $pid;
+            #return $pid;
         }
         //子进程运行,当前上下文为Worker
         elseif($pid == 0)
         {
-            //test
-            fclose($channel[0]);
-            fwrite($channel[1],"Message From Worker!\n");
-            sleep(1);
-            echo fgets($channel[1]);
-            #file_put_contents('../logs/wechat_bot.log',date('Y-m-d H:i:s').'WorkerPid['.posix_getpid().']'.PHP_EOL,FILE_APPEND);
-            #self::set_process_title(sprin  tf('PHPServerd Pid[%s]',$pid));
+            $pid = posix_getpid();
+            self::test_task($pid);
             exit(0);
         }
         //出错退出,-1
         else
         {
             exit('fork worker fail!');
+        }
+    }
+
+    protected static function test_task($pid)
+    {
+        $i = 0;
+        while($i < 100)
+        {
+            file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
+            $i++;
         }
     }
 }
