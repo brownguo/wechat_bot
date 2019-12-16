@@ -27,6 +27,7 @@ class Worker
 
     protected static function run()
     {
+        #print_r(self::$worker_pids);
         while(true)
         {
             pcntl_signal_dispatch();
@@ -60,9 +61,9 @@ class Worker
     #停止所有进程，如果当前任务没有执行完成，ctrl+c之后子进程的会没有人接管变为1。
     protected static function stop_all_worker()
     {
-        foreach (self::$worker_pids as $worker_pid)
+        foreach (self::$worker_pids as $key => $worker_pid)
         {
-            posix_kill($worker_pid,SIGINT);
+            posix_kill($worker_pid,SIGKILL);
         }
     }
 
@@ -100,7 +101,7 @@ class Worker
 
     protected static function createWorkers()
     {
-        for($i=0;$i<2;$i++)
+        for($i=1;$i<5;$i++)
         {
             #echo $i.PHP_EOL;
             self::for_one_worker($i);
@@ -140,9 +141,9 @@ class Worker
     protected static function test_task($pid)
     {
         $i = 0;
-        while($i < 100)
+        while($i < 100000000)
         {
-            file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
+            file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').'Line:'.$i .' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
             $i++;
         }
     }
