@@ -20,20 +20,20 @@ class Worker
     protected static $pid_file = '../logs/wechat_bot.pid';
 
     protected static $worker_pid  = 1;
-    protected static $worker_info = array();
+    protected static $worker_info;
 
     public static function init()
     {
         self::$master_pid = posix_getpid();
         file_put_contents(PID_FILE, posix_getpid());
         chmod(PID_FILE, 0644);
-        self::installSignal();
-        self::createWorkers();
-        self::run();
     }
 
-    protected static function run()
+    public static function run()
     {
+        self::installSignal();
+        self::createWorkers();
+
         while(true)
         {
             pcntl_signal_dispatch();
@@ -76,10 +76,14 @@ class Worker
         {
             #先把master干掉
             posix_kill($pid,SIGINT);
+
+            #在把worker干掉
             foreach (self::$worker_pids as $key => $worker_pid)
             {
                 posix_kill($worker_pid,SIGKILL);
             }
+
+            #删除PID文件
             unlink(PID_FILE);
             echo "Server stop success\n";
         }
@@ -119,7 +123,7 @@ class Worker
 
     protected static function createWorkers()
     {
-        for($i=1;$i<3;$i++)
+        for($i=1;$i<2;$i++)
         {
             #echo $i.PHP_EOL;
             self::for_one_worker($i);
@@ -127,17 +131,11 @@ class Worker
     }
     protected static function for_one_worker($worker_id)
     {
-        if(!($channel = self::createChannel()))
-        {
-            exit('Create Channel Fail!');
-        }
-
         $pid = pcntl_fork();
 
         //主进程记录子进程pid,当前上线文为Master
         if($pid > 0)
         {
-            self::$channels[$pid] = $channel[0];
             self::$worker_pids[$worker_id] = $pid;
             #unset($channel);
             #return $pid;
@@ -146,6 +144,7 @@ class Worker
         elseif($pid == 0)
         {
             $pid = posix_getpid();
+           # self::set_worker_status();
             self::test_task($pid);
             exit(0);
         }
@@ -164,11 +163,12 @@ class Worker
             //这里会终端信号，不知道为啥
             #file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').'Line:'.$i .' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
             $i++;
+            #print_r(self::get_worker_status());
         }
     }
 
 
-    public static function get_worker_status()
+    public static function set_worker_status()
     {
         $mem    = round(memory_get_usage(true)/(1024*1024),2);
         $data   = array(
@@ -176,8 +176,12 @@ class Worker
             'mem' => $mem,
         );
         $data = json_encode($data);
-        #self::$worker_info[posix_getpid()] = $data;
-        return $data;
+        self::$worker_info = array($data);
+    }
+
+    public static function get_worker_status()
+    {
+        return self::$worker_info;
     }
 
     public static function display_ui()
@@ -189,8 +193,6 @@ class Worker
 
         $display_str .= str_pad('87651', 10 + 2).
                         str_pad('2MB', 11 + 3)."\n";
-
-        print_r(self::get_worker_status());
         echo $display_str;
     }
 }
@@ -206,6 +208,7 @@ switch ($cmd)
 {
     case 'start':
         Worker::init();
+        worker::run();
         break;
     case 'stop':
         worker::stop_all_worker();
