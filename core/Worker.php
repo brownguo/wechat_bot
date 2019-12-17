@@ -19,7 +19,7 @@ class Worker
 
     protected static $pid_file = '../logs/wechat_bot.pid';
 
-    protected static $worker_pid;
+    protected static $worker_pid  = 1;
     protected static $worker_info = array();
 
     public static function init()
@@ -34,7 +34,6 @@ class Worker
 
     protected static function run()
     {
-        #print_r(self::$worker_pids);
         while(true)
         {
             pcntl_signal_dispatch();
@@ -120,7 +119,7 @@ class Worker
 
     protected static function createWorkers()
     {
-        for($i=1;$i<5;$i++)
+        for($i=1;$i<3;$i++)
         {
             #echo $i.PHP_EOL;
             self::for_one_worker($i);
@@ -147,7 +146,7 @@ class Worker
         elseif($pid == 0)
         {
             $pid = posix_getpid();
-            #self::test_task($pid);
+            self::test_task($pid);
             exit(0);
         }
         //出错退出,-1
@@ -162,7 +161,8 @@ class Worker
         $i = 0;
         while($i < 100000000)
         {
-            file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').'Line:'.$i .' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
+            //这里会终端信号，不知道为啥
+            #file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').'Line:'.$i .' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
             $i++;
         }
     }
@@ -172,6 +172,7 @@ class Worker
     {
         $mem    = round(memory_get_usage(true)/(1024*1024),2);
         $data   = array(
+            'pid' => self::$worker_pid,
             'mem' => $mem,
         );
         $data = json_encode($data);
