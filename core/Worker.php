@@ -6,9 +6,10 @@
  * Time: 下午3:20
  */
 
+define('PID_FILE', '../logs/wechat_bot.pid');
+
 class Worker
 {
-
     //MasterID
     protected static $master_pid  = 0;
     //所有子进程
@@ -16,11 +17,17 @@ class Worker
     //master与worker之间通信管道
     protected static $channels = array();
 
+    protected static $pid_file = '../logs/wechat_bot.pid';
+
+    protected static $worker_pid;
+    protected static $worker_info = array();
+
     public static function init()
     {
         self::$master_pid = posix_getpid();
+        file_put_contents(PID_FILE, posix_getpid());
+        chmod(PID_FILE, 0644);
         self::installSignal();
-        #self::for_one_worker();
         self::createWorkers();
         self::run();
     }
@@ -59,11 +66,23 @@ class Worker
     }
 
     #停止所有进程，如果当前任务没有执行完成，ctrl+c之后子进程的会没有人接管变为1。
-    protected static function stop_all_worker()
+    public static function stop_all_worker()
     {
-        foreach (self::$worker_pids as $key => $worker_pid)
+        $pid = @file_get_contents(PID_FILE);
+        if(empty($pid))
         {
-            posix_kill($worker_pid,SIGKILL);
+            exit("not running!\n");
+        }
+        else
+        {
+            #先把master干掉
+            posix_kill($pid,SIGINT);
+            foreach (self::$worker_pids as $key => $worker_pid)
+            {
+                posix_kill($worker_pid,SIGKILL);
+            }
+            unlink(PID_FILE);
+            echo "Server stop success\n";
         }
     }
 
@@ -128,7 +147,7 @@ class Worker
         elseif($pid == 0)
         {
             $pid = posix_getpid();
-            self::test_task($pid);
+            #self::test_task($pid);
             exit(0);
         }
         //出错退出,-1
@@ -147,6 +166,50 @@ class Worker
             $i++;
         }
     }
+
+
+    public static function get_worker_status()
+    {
+        $mem    = round(memory_get_usage(true)/(1024*1024),2);
+        $data   = array(
+            'mem' => $mem,
+        );
+        $data = json_encode($data);
+        #self::$worker_info[posix_getpid()] = $data;
+        return $data;
+    }
+
+    public static function display_ui()
+    {
+        $display_str = "------------------------------PROCESS STATUS------------------------------\n";
+        $display_str .= "pid" . str_pad('', 10 - strlen('pid')) .
+            "memory" . str_pad('', 10 - strlen('memory')) .
+            "\n";
+
+        $display_str .= str_pad('87651', 10 + 2).
+                        str_pad('2MB', 11 + 3)."\n";
+
+        print_r(self::get_worker_status());
+        echo $display_str;
+    }
 }
 
-Worker::init();
+if(empty($argv[1]))
+{
+    echo "Usage: {status}\n";
+    exit(0);
+}
+$cmd = $argv[1];
+
+switch ($cmd)
+{
+    case 'start':
+        Worker::init();
+        break;
+    case 'stop':
+        worker::stop_all_worker();
+        break;
+    case 'status':
+        worker::display_ui();
+        break;
+}
