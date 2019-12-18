@@ -7,7 +7,7 @@
  */
 
 define('PID_FILE', '../logs/wechat_bot.pid');
-
+include_once "../plugins/requests.php";
 class Worker
 {
     //MasterID
@@ -68,6 +68,7 @@ class Worker
     public static function stop_all_worker()
     {
         $pid = @file_get_contents(PID_FILE);
+
         if(empty($pid))
         {
             exit("not running!\n");
@@ -123,7 +124,7 @@ class Worker
 
     protected static function createWorkers()
     {
-        for($i=1;$i<2;$i++)
+        for($i=1;$i<4;$i++)
         {
             #echo $i.PHP_EOL;
             self::for_one_worker($i);
@@ -138,13 +139,17 @@ class Worker
         {
             self::$worker_pids[$worker_id] = $pid;
             #unset($channel);
+            #$res = pcntl_waitpid($pid, $status, WNOHANG);
+            pcntl_wait($status);
+            echo sprintf('status:%s',$status).PHP_EOL;
             #return $pid;
         }
         //子进程运行,当前上下文为Worker
         elseif($pid == 0)
         {
             $pid = posix_getpid();
-           # self::set_worker_status();
+            self::$worker_pid = $pid;
+            #echo sprintf('res:%s_status:%s',$res,$status).PHP_EOL;
             self::test_task($pid);
             exit(0);
         }
@@ -157,23 +162,29 @@ class Worker
 
     protected static function test_task($pid)
     {
-        $i = 0;
-        while($i < 100000000)
-        {
-            //这里会终端信号，不知道为啥
-            #file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').'Line:'.$i .' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
-            $i++;
-            #print_r(self::get_worker_status());
-        }
+        #file_put_contents(sprintf('../logs/process_%s.log',$pid),date('Y-m-d H:i:s').'Line:'.$i .' WorkerPid['.$pid.']'.PHP_EOL,FILE_APPEND);
+        #sleep(2);
+        #self::set_worker_status();
+        #print_r(self::get_worker_status());
+        requests::get(sprintf('http://test.stat.com/?pid=%s',$pid));
+        sleep(2);
+        #print_r(self::get_worker_status());
     }
 
 
     public static function set_worker_status()
     {
         $mem    = round(memory_get_usage(true)/(1024*1024),2);
+        $loadavg = sys_getloadavg();
+        foreach ($loadavg as $k=>$v)
+        {
+            $loadavg[$k] = round($v, 2);
+        }
+
         $data   = array(
             'pid' => self::$worker_pid,
             'mem' => $mem,
+            'load_avg' => $loadavg
         );
         $data = json_encode($data);
         self::$worker_info = array($data);
