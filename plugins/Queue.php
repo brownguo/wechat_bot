@@ -12,12 +12,19 @@ class Redis
 
     public static $prefix = 'pws_';
     public static $link;
-    
+
     public static function init()
     {
         if(!extension_loaded('redis'))
         {
-            exit('Redis extension was not found!');
+            echo "Redis extension was not found ..\n";
         }
     }
+
+    public static function set()
+    {
+
+    }
 }
+
+Redis::init();
