@@ -27,7 +27,7 @@ class price
         while(true)
         {
             self::get_price_by_niceapp();
-            sleep(1);
+            sleep(rand(5,10));
         }
     }
     protected static function get_subtraction()
@@ -97,7 +97,7 @@ class price
 
     public static function display_ui()
     {
-        $display_str = "-----------------------------PRICE STATUS BY NICEAPP-----------------\n";
+        $display_str = "-----------------------------PRICE STATUS BY NICEAPP---------------\n";
         $display_str .= sprintf("商品名称:%s\n发售日期:%s\n货号:%s\n当前时间:%s\n",
             "\033[36m".self::$nice_goods_detail['name']."\e[0m",
             self::$nice_goods_detail['release_time'],
@@ -112,7 +112,7 @@ class price
             "盈亏" . str_pad('', 20 - strlen('盈亏')) .
             "\n";
 
-        $display_str .= "---------------------------------------------------------------------\n";
+        $display_str .= "-------------------------------------------------------------------\n";
 
         foreach (self::$nice_current_status as $key=>$val)
         {
