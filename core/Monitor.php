@@ -9,6 +9,6 @@
 class Monitor
 {
     protected static $configs = array(
-        
+
     );
 }
