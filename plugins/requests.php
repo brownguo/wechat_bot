@@ -35,7 +35,7 @@ class requests
         return self::$ch;
     }
 
-    public static function request($url,$method,$args,$is_save_cookies,$is_carry_cookies,$cookies=null)
+    public static function request($url,$method,$args,$headers=null,$is_save_cookies,$is_carry_cookies,$cookies=null)
     {
         $method = strtoupper($method);
 
@@ -44,7 +44,7 @@ class requests
             $url = $url.(strpos($url, '?') === false ? '?' : '&').http_build_query($args);
         }
 
-        curl_setopt (self::$ch, CURLOPT_REFERER, "https://wx.qq.com/");
+        #curl_setopt (self::$ch, CURLOPT_REFERER, "https://wx.qq.com/");
 
         if($method == 'POST')
         {
@@ -53,12 +53,23 @@ class requests
                 $args = http_build_query($args);
             }
 
-            curl_setopt(self::$ch, CURLOPT_HTTPHEADER, array(
-                "ContentType: application/json; charset=UTF-8"
-            ));
+            #curl_setopt(self::$ch, CURLOPT_HTTPHEADER, array(
+            #    "ContentType: application/json; charset=UTF-8"
+            #));
 
             curl_setopt(self::$ch, CURLOPT_POST, true);
             curl_setopt(self::$ch, CURLOPT_POSTFIELDS,$args);
+        }
+
+        if(strpos($url, 'https') !== false)
+        {
+            curl_setopt(static::$ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt(static::$ch, CURLOPT_SSL_VERIFYHOST, false);
+        }
+
+        if($headers)
+        {
+            curl_setopt(self::$ch, CURLOPT_HTTPHEADER, $headers);
         }
 
         if($is_save_cookies)
@@ -96,17 +107,17 @@ class requests
         curl_close(self::$ch);
     }
 
-    public static function get($url,$args=null,$is_save_cookies = false,$is_carry_cookies = false)
+    public static function get($url,$args=null,$headers=null,$is_save_cookies = false,$is_carry_cookies = false)
     {
         self::_init();
-        self::request($url,'get',$args,$is_save_cookies,$is_carry_cookies);
+        self::request($url,'get',$args,$headers,$is_save_cookies,$is_carry_cookies);
         return self::$result;
     }
 
-    public static function post($url,$args,$is_save_cookies = false,$is_carry_cookies = false)
+    public static function post($url,$args,$headers,$is_save_cookies = null,$is_carry_cookies = null)
     {
         self::_init();
-        self::request($url,'post',$args,$is_save_cookies,$is_carry_cookies);
+        self::request($url,'post',$args,$headers,$is_save_cookies,$is_carry_cookies);
         return self::$result;
     }
 
