@@ -197,14 +197,7 @@ class Worker
 
     public static function display_ui()
     {
-        $display_str = "------------------------------PROCESS STATUS------------------------------\n";
-        $display_str .= "pid" . str_pad('', 10 - strlen('pid')) .
-            "memory" . str_pad('', 10 - strlen('memory')) .
-            "\n";
-
-        $display_str .= str_pad('87651', 10 + 2).
-                        str_pad('2MB', 11 + 3)."\n";
-        echo $display_str;
+        $d = date('Y-m-d H:i:s',time());
     }
 }
 
