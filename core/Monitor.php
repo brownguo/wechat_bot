@@ -17,16 +17,14 @@ class Monitor
         'url'       =>  'https://api.nike.com/product_feed/threads/v2/?',
         'count'     => 1,
         'filter'    => array(
-            'marketplace(CN)',
-            'language(zh-Hans)',
-            'upcoming(true)',
+            'marketplace(CN)','language(zh-Hans)','upcoming(true)',
             'channelId(010794e5-35fe-4e32-aaff-cd2c74f89d61)',
             'exclusiveAccess(true,false)',
         ),
         'sort'   =>'effectiveStartSellDateAsc',
 
         'fields' => array(
-
+            'active','id','lastFetchTime','productInfo','publishedContent.nodes','publishedContent.properties.coverCard',
         ),
         'publishType' => array(
             'FLOW'  => '先到先得(FLOW)',
