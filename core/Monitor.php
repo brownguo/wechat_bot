@@ -10,6 +10,54 @@ use \Workerman\Worker;
 use \Workerman\Lib\Timer;
 require_once __DIR__ . '/../plugins/Workerman/Autoloader.php';
 
+class Monitor
+{
+
+    protected static $configs = array(
+        'url'       =>  'https://api.nike.com/product_feed/threads/v2/?',
+        'count'     => 1,
+        'filter'    => array(
+            'marketplace(CN)',
+            'language(zh-Hans)',
+            'upcoming(true)',
+            'channelId(010794e5-35fe-4e32-aaff-cd2c74f89d61)',
+            'exclusiveAccess(true,false)',
+        ),
+        'sort'   =>'effectiveStartSellDateAsc',
+
+        'fields' => array(
+
+        ),
+        'publishType' => array(
+            'FLOW'  => '先到先得(FLOW)',
+            'LEO'   => '限量(LEO)',
+            'DAN'   => '抽签(DAN)',
+        ),
+    );
+
+    public static function getConfigs()
+    {
+        return static::$configs;
+    }
+
+    public static function handle_url_params()
+    {
+        $configs    = static::getConfigs();
+        $url_fields = '';
+        foreach ($configs['fields']['dict'] as $val)
+        {
+            $url_fields .= sprintf('fields=%s&',$val);
+        }
+        $url_fields = $configs['url'].'anchor=0&count='.$configs['count'].trim($url_fields,'&');
+
+        echo $url_fields.PHP_EOL;
+    }
+}
+
+Monitor::handle_url_params();
+
+exit();
+
 $ws_worker = new Worker('websocket://0.0.0.0:8080');
 $ws_worker->count = 8;
 // 连接建立时给对应连接设置定时器
