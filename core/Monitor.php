@@ -14,19 +14,18 @@ class Monitor
 {
 
     protected static $configs = array(
-        'url'           =>  'https://api.nike.com/product_feed/threads/v2/?',
-        'url_dict'      =>  array(
-            'filter'    =>  array(
-                'marketplace(CN)','language(zh-Hans)','upcoming(true)',
-                'channelId(010794e5-35fe-4e32-aaff-cd2c74f89d61)',
-                'exclusiveAccess(true,false)'
-            ),
-            'fields'    =>array(
-                'active','id','lastFetchTime','productInfo','publishedContent.nodes','publishedContent.properties.coverCard',
-            ),
-            'sort'      =>'effectiveStartSellDateAsc',
-            'count'     =>1,
+        'url'       =>  'https://api.nike.com/product_feed/threads/v2/?',
+        'filter'    =>  array(
+            'marketplace(CN)','language(zh-Hans)','upcoming(true)',
+            'channelId(010794e5-35fe-4e32-aaff-cd2c74f89d61)',
+            'exclusiveAccess(true,false)'
         ),
+        'fields'    =>array(
+            'active','id','lastFetchTime','productInfo','publishedContent.nodes','publishedContent.properties.coverCard',
+        ),
+        'sort'      =>'effectiveStartSellDateAsc',
+        'count'     =>1,
+        'anchor'    =>0,
         'publishType' => array(
             'FLOW'  => '先到先得(FLOW)',
             'LEO'   => '限量(LEO)',
@@ -42,11 +41,16 @@ class Monitor
     public static function handle_url_params()
     {
         $configs    = static::getConfigs();
-        $data       = '';
-        foreach ($configs['url_dict'] as $key => $val)
+        $url = $configs['url'].sprintf('anchor=%s&count=%s&',$configs['anchor'],$configs['count']);
+        foreach ($configs['filter'] as $filter)
         {
-
+            $url .= sprintf('filter=%s&',$filter);
         }
+        foreach ($configs['fields'] as $fields)
+        {
+            $url .= sprintf('fields=%s&',$fields);
+        }
+        return $url;
     }
 }
 
