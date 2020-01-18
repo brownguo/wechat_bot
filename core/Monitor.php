@@ -9,9 +9,12 @@
 use \Workerman\Worker;
 use \Workerman\Lib\Timer;
 require_once __DIR__ . '/../plugins/Workerman/Autoloader.php';
+require_once __DIR__ . '/../plugins/vendor/autoload.php';
 
 class Monitor
 {
+
+    protected static $client;
 
     protected static $configs = array(
         'url'       =>  'https://api.nike.com/product_feed/threads/v2/?',
@@ -21,10 +24,10 @@ class Monitor
             'exclusiveAccess(true,false)'
         ),
         'fields'    =>array(
-            'active','id','lastFetchTime','productInfo','publishedContent.nodes','publishedContent.properties.coverCard',
+            'active','id','lastFetchTime','productInfo',
         ),
         'sort'      =>'effectiveStartSellDateAsc',
-        'count'     =>1,
+        'count'     =>2,
         'anchor'    =>0,
         'publishType' => array(
             'FLOW'  => '先到先得(FLOW)',
@@ -33,10 +36,16 @@ class Monitor
         ),
     );
 
+    public static function _init()
+    {
+        static::$client = new GuzzleHttp\Client();
+    }
+
     public static function getConfigs()
     {
         return static::$configs;
     }
+
 
     public static function handle_url_params()
     {
@@ -50,11 +59,32 @@ class Monitor
         {
             $url .= sprintf('fields=%s&',$fields);
         }
+        $url .= sprintf('soft=%s',$configs['sort']);
         return $url;
     }
-}
 
-Monitor::handle_url_params();
+    public static function get_product_feed()
+    {
+        $url        = static::handle_url_params();
+        $headers    = array(
+            'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36',
+        );
+        $response   = static::$client->request('GET',$url,['headers'=>$headers])->getBody();
+        $response   = json_decode($response,true);
+
+        foreach ($response['objects'] as $products)
+        {
+            $productInfo[] = array(
+                'id'            =>$products['id'],
+                'lastFetchTime' => strtotime($products['lastFetchTime']),
+            );
+        }
+
+        print_r($productInfo);
+    }
+}
+Monitor::_init();
+Monitor::get_product_feed();
 
 exit();
 
