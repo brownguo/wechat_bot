@@ -77,10 +77,10 @@ class Monitor
             $productInfo[] = array(
                 'id'            =>$products['id'],
                 'lastFetchTime' => strtotime($products['lastFetchTime']),
+                'productInfo'   =>$products['productInfo'],
             );
         }
-
-        print_r($productInfo);
+        return $productInfo;
     }
 }
 Monitor::_init();
