@@ -27,7 +27,7 @@ class Monitor
             'active','id','lastFetchTime','productInfo',
         ),
         'sort'      =>'effectiveStartSellDateAsc',
-        'count'     =>2,
+        'count'     =>36,
         'anchor'    =>0,
         'publishType' => array(
             'FLOW'  => '先到先得(FLOW)',
@@ -80,12 +80,27 @@ class Monitor
                 'productInfo'   =>$products['productInfo'],
             );
         }
-        return $productInfo;
+
+//        print_r($productInfo);
+//        exit();
+        foreach ($productInfo as $feed)
+        {
+            #print_r($feed['productInfo']);
+            $feed = $feed['productInfo'][0];
+            $product_name  = $feed['productContent']['fullTitle'];
+            $product_price = $feed['merchPrice']['fullPrice'];
+            $product_status = $feed['merchProduct']['status'];
+            $product_method = $feed['launchView']['method'];
+            $product_id     = $feed['merchProduct']['id'];
+            echo sprintf('ID:%s, Name:%s, 状态:%s, 价格:%s, 发售方式:%s',$product_id,$product_name,$product_status,$product_price,$product_method)."\n\n";
+        }
+
+        #return $productInfo;
     }
 }
 Monitor::_init();
-Monitor::get_product_feed();
-
+$respone = Monitor::get_product_feed();
+#print_r($respone);
 exit();
 
 $ws_worker = new Worker('websocket://0.0.0.0:8080');
